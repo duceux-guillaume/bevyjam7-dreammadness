@@ -1,0 +1,87 @@
+[package]
+name = "dreamadness"
+version = "0.1.0"
+edition = "2024"
+publish = false
+authors = ["Guillaume Duceux <duceux.guillaume@gmail.com>"]
+exclude = ["dist", "build", "assets", "credits"]
+license = "MIT or Apache-2.0"
+default-run = "dreamadness"
+
+
+[dependencies]
+bevy_pancam = { version = "0.20", default-features = true, features = [
+    #"bevy_egui_0_39",
+] }
+bevy = { version = "0.18", default-features = false, features = ["2d"] }
+bevy_seedling = "0.7"
+rand = "0.9"
+# Compile out low-severity logs to improve performance.
+# Remove these features if you want to profile your game with tracy.
+# (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
+tracing = { version = "0.1", features = [
+    "max_level_debug",
+    "release_max_level_warn",
+] }
+
+# Editor dependencies
+bevy-inspector-egui = { version = "0.36", features = ["bevy"] }
+transform-gizmo-bevy = "0.8.0"
+bevy_egui = { version = "0.39", default-features = false }
+bevy_camera = "0.18.0"
+bevy_reflect = "0.18.0"
+bevy_window = "0.18.0"
+egui_dock = "0.18.0"
+
+[target.wasm32-unknown-unknown.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
+
+[features]
+# Default to a native dev build.
+default = ["dev_native"]
+dev = [
+    # Improve compile times for dev builds by linking Bevy as a dynamic library.
+    "bevy/dynamic_linking",
+    "bevy/bevy_dev_tools",
+    "bevy/bevy_ui_debug",
+    # Improve error messages coming from Bevy
+    "bevy/track_location",
+]
+dev_native = [
+    "dev",
+    # Enable asset hot reloading for native dev builds.
+    "bevy/file_watcher",
+    # Enable embedded asset hot reloading for native dev builds.
+    "bevy/embedded_watcher",
+]
+
+[package.metadata.bevy_cli.release]
+# Disable dev features for release builds.
+default-features = false
+
+[package.metadata.bevy_cli.web]
+# Disable native features for web builds.
+default-features = false
+
+[package.metadata.bevy_cli.web.dev]
+features = ["dev"]
+
+# You can configure the warning levels of Bevy lints here. For a list of all lints, see:
+# <https://thebevyflock.github.io/bevy_cli/bevy_lint/lints/>
+[package.metadata.bevy_lint]
+# panicking_methods = "deny"
+# pedantic = "warn"
+
+
+[lints.rust]
+# Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
+
+[lints.clippy]
+# Bevy supplies arguments to systems via dependency injection, so it's natural for systems to
+# request more than 7 arguments, which would undesirably trigger this lint.
+too_many_arguments = "allow"
+# Queries may access many components, which would undesirably trigger this lint.
+type_complexity = "allow"
+# Make sure macros use their standard braces, such as `[]` for `bevy_ecs::children!`.
+nonstandard_macro_braces = "warn"
