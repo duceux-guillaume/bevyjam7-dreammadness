@@ -32,9 +32,10 @@ bevy_camera = "0.18.0"
 bevy_reflect = "0.18.0"
 bevy_window = "0.18.0"
 egui_dock = "0.18.0"
+bevy_ecs_ldtk = "0.14"
 
 [target.wasm32-unknown-unknown.dependencies]
-getrandom = { version = "0.3", features = ["wasm_js"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
 # Default to a native dev build.

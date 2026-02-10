@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 
-use crate::screens::Screen;
+pub(crate) mod level;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Screen::Gameplay), setup);
+    app.add_plugins(level::plugin);
 }
-
-pub fn setup(mut commands: Commands) {}

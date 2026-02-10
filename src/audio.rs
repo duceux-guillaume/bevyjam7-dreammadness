@@ -4,7 +4,6 @@ use bevy_seedling::{
     pool::SamplerPool,
     prelude::{PoolLabel, RepeatMode, Volume, VolumeNode},
     sample::{AudioSample, SamplePlayer},
-    sample_effects,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -20,8 +19,8 @@ pub(super) fn plugin(app: &mut App) {
 struct MusicPool;
 
 fn setup(mut cmd: Commands) {
-    cmd.spawn(SamplerPool(MusicPool));
-    cmd.spawn(SamplerPool(SoundPool));
+    cmd.spawn((Name::new("MusicPool"), SamplerPool(MusicPool)));
+    cmd.spawn((Name::new("SoundPool"), SamplerPool(SoundPool)));
 }
 
 /// A music audio instance.
