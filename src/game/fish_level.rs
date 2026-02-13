@@ -1,11 +1,5 @@
 use crate::screens::Screen;
-use bevy::{
-    input::{
-        gestures::*,
-        mouse::{MouseButtonInput, MouseMotion, MouseWheel},
-    },
-    prelude::*,
-};
+use bevy::{input::mouse::MouseButtonInput, prelude::*};
 use bevy_ecs_ldtk::prelude::*;
 use bevy_pancam::PanCam;
 
@@ -22,13 +16,17 @@ pub(super) fn plugin(app: &mut App) {
             Update,
             (on_player_spawn, player_control).run_if(in_state(Screen::Gameplay)),
         )
-        .add_systems(FixedUpdate, update_fish.run_if(in_state(Screen::Gameplay)));
+        .add_systems(
+            FixedUpdate,
+            (update_ball, update_fish).run_if(in_state(Screen::Gameplay)),
+        );
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut cam: Single<&mut PanCam>) {
     commands.spawn((
         LdtkWorldBundle {
             ldtk_handle: asset_server.load("levels/level_1.ldtk").into(),
+            transform: Transform::from_translation(Vec3::new(-192., -216., 0.0)),
             ..Default::default()
         },
         Name::new("Level"),
@@ -158,7 +156,7 @@ fn ball(
     tf: Transform,
 ) -> impl Bundle {
     (
-        Mesh2d(meshes.add(Circle::new(16.))),
+        Mesh2d(meshes.add(Circle::new(4.))),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::BLACK))),
         tf,
         Ball,
@@ -168,17 +166,17 @@ fn ball(
 }
 
 fn player_control(
-    camera: Single<(&Camera, &GlobalTransform)>,
+    camera: Single<(&Camera, &GlobalTransform), Without<PlayerMarker>>,
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
-    mut player_tf: Single<&mut Transform, With<PlayerMarker>>,
+    mut player_tf: Single<(&mut Transform, &mut GlobalTransform), With<PlayerMarker>>,
     mut mouse_button_input_reader: MessageReader<MouseButtonInput>,
     mut cursor_moved_reader: MessageReader<CursorMoved>,
 ) {
     for mouse_button_input in mouse_button_input_reader.read() {
         if mouse_button_input.state.is_pressed() {
-            let mut tf = Transform::from_translation(player_tf.translation);
+            let mut tf = Transform::from_translation(player_tf.1.translation());
             tf.translation.z = 10.0;
             commands.spawn(ball(meshes, materials, tf));
             break;
@@ -193,9 +191,18 @@ fn player_control(
         if cursor.is_err() {
             continue;
         }
-        if cursor.unwrap().x < 0.0 || cursor.unwrap().x > 384.0 {
+        if cursor.unwrap().x < -192.0 || cursor.unwrap().x > 192.0 {
             continue;
         }
-        player_tf.translation.x = cursor.unwrap().x;
+        player_tf.0.translation.x = cursor.unwrap().x + 192.;
+    }
+}
+
+fn update_ball(mut commands: Commands, mut query: Query<(Entity, &mut Transform), With<Ball>>) {
+    for (entity, mut tf) in &mut query {
+        tf.translation.y -= 1.0;
+        if tf.translation.y < -216.0 {
+            commands.entity(entity).try_despawn();
+        }
     }
 }
