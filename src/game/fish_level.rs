@@ -1,5 +1,11 @@
 use crate::screens::Screen;
-use bevy::prelude::*;
+use bevy::{
+    input::{
+        gestures::*,
+        mouse::{MouseButtonInput, MouseMotion, MouseWheel},
+    },
+    prelude::*,
+};
 use bevy_ecs_ldtk::prelude::*;
 use bevy_pancam::PanCam;
 
@@ -12,7 +18,10 @@ pub(super) fn plugin(app: &mut App) {
         .register_ldtk_entity::<LdtkEntityBundle>("Alga_1x2")
         .register_ldtk_entity::<Player>("Player")
         .add_systems(OnEnter(Screen::Gameplay), setup)
-        .add_systems(Update, on_player_spawn.run_if(in_state(Screen::Gameplay)))
+        .add_systems(
+            Update,
+            (on_player_spawn, player_control).run_if(in_state(Screen::Gameplay)),
+        )
         .add_systems(FixedUpdate, update_fish.run_if(in_state(Screen::Gameplay)));
 }
 
@@ -131,7 +140,62 @@ pub struct Player {
     marker: PlayerMarker,
 }
 
-fn on_player_spawn(mut sprite: Single<&mut Sprite, Added<PlayerMarker>>, server: Res<AssetServer>) {
-    sprite.image = server.load("images/player.png");
-    sprite.custom_size = Some(Vec2::splat(32.));
+fn on_player_spawn(
+    mut player: Single<(&mut Sprite, &mut Name), Added<PlayerMarker>>,
+    server: Res<AssetServer>,
+) {
+    player.0.image = server.load("images/player.png");
+    player.0.custom_size = Some(Vec2::splat(32.));
+    *player.1 = Name::new("Player");
+}
+
+#[derive(Default, Component)]
+struct Ball;
+
+fn ball(
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    tf: Transform,
+) -> impl Bundle {
+    (
+        Mesh2d(meshes.add(Circle::new(16.))),
+        MeshMaterial2d(materials.add(ColorMaterial::from(Color::BLACK))),
+        tf,
+        Ball,
+        Name::new("Ball"),
+        DespawnOnExit(Screen::Gameplay),
+    )
+}
+
+fn player_control(
+    camera: Single<(&Camera, &GlobalTransform)>,
+    mut commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<ColorMaterial>>,
+    mut player_tf: Single<&mut Transform, With<PlayerMarker>>,
+    mut mouse_button_input_reader: MessageReader<MouseButtonInput>,
+    mut cursor_moved_reader: MessageReader<CursorMoved>,
+) {
+    for mouse_button_input in mouse_button_input_reader.read() {
+        if mouse_button_input.state.is_pressed() {
+            let mut tf = Transform::from_translation(player_tf.translation);
+            tf.translation.z = 10.0;
+            commands.spawn(ball(meshes, materials, tf));
+            break;
+        }
+    }
+
+    for cursor_moved in cursor_moved_reader.read() {
+        let cursor = camera
+            .0
+            .viewport_to_world(camera.1, cursor_moved.position)
+            .map(|ray| ray.origin.truncate());
+        if cursor.is_err() {
+            continue;
+        }
+        if cursor.unwrap().x < 0.0 || cursor.unwrap().x > 384.0 {
+            continue;
+        }
+        player_tf.translation.x = cursor.unwrap().x;
+    }
 }
