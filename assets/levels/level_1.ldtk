@@ -11,7 +11,7 @@
 	"iid": "2838e440-fa90-11f0-8da1-df94f22a48cf",
 	"jsonVersion": "1.5.3",
 	"appBuildId": 473703,
-	"nextUid": 16,
+	"nextUid": 18,
 	"identifierStyle": "Capitalize",
 	"toc": [],
 	"worldLayout": "Free",
@@ -286,6 +286,41 @@
 			"pivotX": 0.5,
 			"pivotY": 1,
 			"fieldDefs": []
+		},
+		{
+			"identifier": "Fish_food",
+			"uid": 17,
+			"tags": [],
+			"exportToToc": false,
+			"allowOutOfBounds": false,
+			"doc": null,
+			"width": 16,
+			"height": 16,
+			"resizableX": false,
+			"resizableY": false,
+			"minWidth": null,
+			"maxWidth": null,
+			"minHeight": null,
+			"maxHeight": null,
+			"keepAspectRatio": false,
+			"tileOpacity": 1,
+			"fillOpacity": 0.08,
+			"lineOpacity": 0,
+			"hollow": false,
+			"color": "#733E39",
+			"renderMode": "Tile",
+			"showName": true,
+			"tilesetId": 16,
+			"tileRenderMode": "FitInside",
+			"tileRect": { "tilesetUid": 16, "x": 0, "y": 0, "w": 16, "h": 16 },
+			"uiTileRect": null,
+			"nineSliceBorders": [],
+			"maxCount": 0,
+			"limitScope": "PerLevel",
+			"limitBehavior": "MoveLastOne",
+			"pivotX": 0.5,
+			"pivotY": 0.5,
+			"fieldDefs": []
 		}
 	], "tilesets": [
 		{
@@ -410,6 +445,25 @@
 				"opaqueTiles": "000000000000000000000000000",
 				"averageColors": "8a99b88865558999b88865557aa9b88865558aa9b88865559a99b88865557888b88824448a99a8887555aaa9c88876663888d9993888"
 			}
+		},
+		{
+			"__cWid": 1,
+			"__cHei": 4,
+			"identifier": "Fishfood",
+			"uid": 16,
+			"relPath": "fish_level/fishfood.png",
+			"embedAtlas": null,
+			"pxWid": 16,
+			"pxHei": 64,
+			"tileGridSize": 16,
+			"spacing": 0,
+			"padding": 0,
+			"tags": [],
+			"tagsSourceEnumUid": null,
+			"enumTags": [],
+			"customData": [],
+			"savedSelections": [],
+			"cachedPixelData": { "opaqueTiles": "0000", "averageColors": "5a1139115a114a11" }
 		}
 	], "enums": [], "externalEnums": [], "levelFields": [] },
 	"levels": [
@@ -780,7 +834,7 @@
 						},
 						{
 							"__identifier": "Alga_1x1",
-							"__grid": [9,15],
+							"__grid": [22,26],
 							"__pivot": [0.5,1],
 							"__tags": [],
 							"__tile": { "tilesetUid": 8, "x": 0, "y": 0, "w": 16, "h": 16 },
@@ -789,10 +843,26 @@
 							"width": 16,
 							"height": 16,
 							"defUid": 7,
-							"px": [152,256],
+							"px": [360,432],
 							"fieldInstances": [],
-							"__worldX": 24,
-							"__worldY": 80
+							"__worldX": 232,
+							"__worldY": 256
+						},
+						{
+							"__identifier": "Fish_food",
+							"__grid": [12,0],
+							"__pivot": [0.5,0.5],
+							"__tags": [],
+							"__tile": { "tilesetUid": 16, "x": 0, "y": 0, "w": 16, "h": 16 },
+							"__smartColor": "#733E39",
+							"iid": "094a0850-fa90-11f0-954e-c3e3878b3e4e",
+							"width": 16,
+							"height": 16,
+							"defUid": 17,
+							"px": [200,8],
+							"fieldInstances": [],
+							"__worldX": 72,
+							"__worldY": -168
 						}
 					]
 				},
