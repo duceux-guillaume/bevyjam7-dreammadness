@@ -129,19 +129,28 @@ fn update_fish(
         // Update eating timer
         timer.0.tick(time.delta());
 
-        // Check collision with balls
+        let is_eating = matches!(*state, FishState::EatingLeft | FishState::EatingRight);
         let mut hit_by_ball = false;
-        for (ball_entity, ball_tf) in &ball_query {
-            let distance = gtf.translation().distance(ball_tf.translation());
-            if distance < 16.0 {
-                hit_by_ball = true;
-                commands.entity(ball_entity).try_despawn();
-                break;
+        let mut going_faster = false;
+
+        if !is_eating {
+            // Check collision with balls
+            for (ball_entity, ball_tf) in &ball_query {
+                let distance = gtf.translation().distance(ball_tf.translation());
+                if distance < 16.0 {
+                    hit_by_ball = true;
+                    commands.entity(ball_entity).try_despawn();
+                    break;
+                }
+
+                // Check if ball is close enough to make the fish go faster
+                if distance < 32.0 {
+                    going_faster = true;
+                }
             }
         }
 
         if hit_by_ball {
-            info!("Fish hit by ball! Starting to eat.");
             *state = match *state {
                 FishState::Idle => FishState::EatingLeft,
                 FishState::SlowLeft => FishState::EatingLeft,
@@ -152,11 +161,8 @@ fn update_fish(
                 FishState::EatingRight => FishState::EatingRight,
             };
             timer.0.reset();
-            info!("timer started: {:?}", timer.0);
         } else {
             // Check if eating timer has finished
-            let is_eating = matches!(*state, FishState::EatingLeft | FishState::EatingRight);
-            info!("timer started: {:?}", timer.0);
             if is_eating && timer.0.remaining().as_secs() == 0 {
                 *state = if *state == FishState::EatingLeft {
                     FishState::SlowLeft
@@ -172,19 +178,49 @@ fn update_fish(
                     if tf.translation.x < 0.0 {
                         FishState::SlowRight
                     } else {
-                        FishState::SlowLeft
+                        if going_faster {
+                            FishState::FastLeft
+                        } else {
+                            FishState::SlowLeft
+                        }
                     }
                 }
-                FishState::FastLeft => FishState::FastLeft,
+                FishState::FastLeft => {
+                    tf.translation.x -= 3.0;
+                    if tf.translation.x < 0.0 {
+                        FishState::SlowRight
+                    } else {
+                        if going_faster {
+                            FishState::FastLeft
+                        } else {
+                            FishState::SlowLeft
+                        }
+                    }
+                }
                 FishState::SlowRight => {
                     tf.translation.x += 1.0;
                     if tf.translation.x > 384.0 {
                         FishState::SlowLeft
                     } else {
-                        FishState::SlowRight
+                        if going_faster {
+                            FishState::FastRight
+                        } else {
+                            FishState::SlowRight
+                        }
                     }
                 }
-                FishState::FastRight => FishState::FastRight,
+                FishState::FastRight => {
+                    tf.translation.x += 3.0;
+                    if tf.translation.x > 384.0 {
+                        FishState::SlowLeft
+                    } else {
+                        if going_faster {
+                            FishState::FastRight
+                        } else {
+                            FishState::SlowRight
+                        }
+                    }
+                }
                 FishState::EatingRight => FishState::EatingRight,
                 FishState::EatingLeft => FishState::EatingLeft,
             };
