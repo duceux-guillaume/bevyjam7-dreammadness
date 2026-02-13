@@ -11,17 +11,24 @@ pub(super) fn plugin(app: &mut App) {
         .insert_resource(LevelSelection::index(0))
         .register_ldtk_entity::<FishGrey>("Fish_grey")
         .register_ldtk_entity::<FishGold>("Fish_golden")
-        .register_ldtk_entity::<LdtkEntityBundle>("Alga_1x1")
-        .register_ldtk_entity::<LdtkEntityBundle>("Alga_1x2")
+        .register_ldtk_entity::<Alga1x1Bundle>("Alga_1x1")
+        .register_ldtk_entity::<Alga1x2Bundle>("Alga_1x2")
         .register_ldtk_entity::<Player>("Player")
         .add_systems(OnEnter(Screen::Gameplay), setup)
         .add_systems(
             Update,
-            (on_player_spawn, player_control, on_fish_spawn).run_if(in_state(Screen::Gameplay)),
+            (
+                on_player_spawn,
+                player_control,
+                on_fish_spawn,
+                on_alga1_spawn,
+                on_alga2_spawn,
+            )
+                .run_if(in_state(Screen::Gameplay)),
         )
         .add_systems(
             FixedUpdate,
-            (update_ball, update_fish).run_if(in_state(Screen::Gameplay)),
+            (update_ball, update_fish, alga_update).run_if(in_state(Screen::Gameplay)),
         );
 }
 
@@ -48,10 +55,35 @@ fn setup(
     ));
 }
 
+#[derive(Component)]
+struct AlgaTimer(Timer);
+
+impl Default for AlgaTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(0.5, TimerMode::Once))
+    }
+}
+
+#[derive(Default, Component)]
+struct Alga1x1;
+
 #[derive(Default, Bundle, LdtkEntity)]
-pub struct LdtkEntityBundle {
+pub struct Alga1x1Bundle {
     #[sprite]
     sprite: Sprite,
+    alga: Alga1x1,
+    marler: AlgaTimer,
+}
+
+#[derive(Default, Component)]
+struct Alga1x2;
+
+#[derive(Default, Bundle, LdtkEntity)]
+pub struct Alga1x2Bundle {
+    #[sprite]
+    sprite: Sprite,
+    alga: Alga1x2,
+    marler: AlgaTimer,
 }
 
 #[derive(Default, Component, PartialEq)]
@@ -360,5 +392,52 @@ fn on_fish_spawn(
             layout: texture_atlas_layout.clone(),
             index: 0,
         });
+    }
+}
+
+fn on_alga1_spawn(
+    mut alga: Query<&mut Sprite, Added<Alga1x1>>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    if alga.is_empty() {
+        return;
+    }
+    let layout = TextureAtlasLayout::from_grid(UVec2::new(16, 16), 1, 2, None, None);
+    let texture_atlas_layout = texture_atlas_layouts.add(layout);
+    for mut sprite in &mut alga {
+        sprite.texture_atlas = Some(TextureAtlas {
+            layout: texture_atlas_layout.clone(),
+            index: 0,
+        });
+    }
+}
+
+fn on_alga2_spawn(
+    mut alga: Query<&mut Sprite, Added<Alga1x2>>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    if alga.is_empty() {
+        return;
+    }
+    let layout = TextureAtlasLayout::from_grid(UVec2::new(16, 32), 1, 2, None, None);
+    let texture_atlas_layout = texture_atlas_layouts.add(layout);
+    for mut sprite in &mut alga {
+        sprite.texture_atlas = Some(TextureAtlas {
+            layout: texture_atlas_layout.clone(),
+            index: 0,
+        });
+    }
+}
+
+fn alga_update(mut alga: Query<(&mut Sprite, &mut AlgaTimer)>, time: Res<Time>) {
+    for (mut sprite, mut algatimer) in &mut alga {
+        algatimer.0.tick(time.delta());
+        if algatimer.0.remaining().as_millis() == 0 {
+            algatimer.0.reset();
+            sprite.texture_atlas.as_mut().and_then(|t| {
+                t.index = (t.index + 1) % 2;
+                Some(())
+            });
+        }
     }
 }
