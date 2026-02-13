@@ -41,7 +41,7 @@ pub struct LdtkEntityBundle {
     sprite: Sprite,
 }
 
-#[derive(Default, Component)]
+#[derive(Default, Component, PartialEq)]
 enum FishState {
     #[default]
     Idle,
@@ -53,6 +53,15 @@ enum FishState {
     EatingRight,
 }
 
+#[derive(Component)]
+struct EatingTimer(Timer);
+
+impl Default for EatingTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(5.0, TimerMode::Once))
+    }
+}
+
 #[derive(Bundle, LdtkEntity)]
 pub struct FishGrey {
     #[sprite]
@@ -60,6 +69,7 @@ pub struct FishGrey {
     name: Name,
     despawn: DespawnOnExit<Screen>,
     fish: FishState,
+    timer: EatingTimer,
 }
 
 impl Default for FishGrey {
@@ -69,6 +79,7 @@ impl Default for FishGrey {
             sprite: Sprite::default(),
             despawn: DespawnOnExit(Screen::Gameplay),
             fish: FishState::default(),
+            timer: EatingTimer::default(),
         }
     }
 }
@@ -84,6 +95,7 @@ pub struct FishGold {
     despawn: DespawnOnExit<Screen>,
     fish: FishState,
     gold_marker: GoldMarker,
+    timer: EatingTimer,
 }
 
 impl Default for FishGold {
@@ -94,35 +106,89 @@ impl Default for FishGold {
             despawn: DespawnOnExit(Screen::Gameplay),
             fish: FishState::default(),
             gold_marker: GoldMarker,
+            timer: EatingTimer::default(),
         }
     }
 }
 
-fn update_fish(mut query: Query<(&mut FishState, &mut Transform)>) {
-    for (mut state, mut tf) in &mut query {
-        *state = match *state {
-            FishState::Idle => FishState::SlowLeft,
-            FishState::SlowLeft => {
-                tf.translation.x -= 1.0;
-                if tf.translation.x < 0.0 {
-                    FishState::SlowRight
-                } else {
-                    FishState::SlowLeft
-                }
+fn update_fish(
+    mut query: Query<
+        (
+            &mut FishState,
+            &mut Transform,
+            &mut EatingTimer,
+            &GlobalTransform,
+        ),
+        Without<Ball>,
+    >,
+    ball_query: Query<(Entity, &GlobalTransform), With<Ball>>,
+    mut commands: Commands,
+    time: Res<Time>,
+) {
+    for (mut state, mut tf, mut timer, gtf) in &mut query {
+        // Update eating timer
+        timer.0.tick(time.delta());
+
+        // Check collision with balls
+        let mut hit_by_ball = false;
+        for (ball_entity, ball_tf) in &ball_query {
+            let distance = gtf.translation().distance(ball_tf.translation());
+            if distance < 16.0 {
+                hit_by_ball = true;
+                commands.entity(ball_entity).try_despawn();
+                break;
             }
-            FishState::FastLeft => FishState::SlowRight,
-            FishState::SlowRight => {
-                tf.translation.x += 1.0;
-                if tf.translation.x > 384.0 {
+        }
+
+        if hit_by_ball {
+            info!("Fish hit by ball! Starting to eat.");
+            *state = match *state {
+                FishState::Idle => FishState::EatingLeft,
+                FishState::SlowLeft => FishState::EatingLeft,
+                FishState::FastLeft => FishState::EatingLeft,
+                FishState::SlowRight => FishState::EatingRight,
+                FishState::FastRight => FishState::EatingRight,
+                FishState::EatingLeft => FishState::EatingLeft,
+                FishState::EatingRight => FishState::EatingRight,
+            };
+            timer.0.reset();
+            info!("timer started: {:?}", timer.0);
+        } else {
+            // Check if eating timer has finished
+            let is_eating = matches!(*state, FishState::EatingLeft | FishState::EatingRight);
+            info!("timer started: {:?}", timer.0);
+            if is_eating && timer.0.remaining().as_secs() == 0 {
+                *state = if *state == FishState::EatingLeft {
                     FishState::SlowLeft
                 } else {
                     FishState::SlowRight
-                }
+                };
             }
-            FishState::FastRight => FishState::EatingRight,
-            FishState::EatingRight => FishState::EatingLeft,
-            FishState::EatingLeft => FishState::Idle,
-        };
+
+            *state = match *state {
+                FishState::Idle => FishState::SlowLeft,
+                FishState::SlowLeft => {
+                    tf.translation.x -= 1.0;
+                    if tf.translation.x < 0.0 {
+                        FishState::SlowRight
+                    } else {
+                        FishState::SlowLeft
+                    }
+                }
+                FishState::FastLeft => FishState::FastLeft,
+                FishState::SlowRight => {
+                    tf.translation.x += 1.0;
+                    if tf.translation.x > 384.0 {
+                        FishState::SlowLeft
+                    } else {
+                        FishState::SlowRight
+                    }
+                }
+                FishState::FastRight => FishState::FastRight,
+                FishState::EatingRight => FishState::EatingRight,
+                FishState::EatingLeft => FishState::EatingLeft,
+            };
+        }
     }
 }
 
