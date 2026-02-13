@@ -17,7 +17,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(OnEnter(Screen::Gameplay), setup)
         .add_systems(
             Update,
-            (on_player_spawn, player_control).run_if(in_state(Screen::Gameplay)),
+            (on_player_spawn, player_control, on_fish_spawn).run_if(in_state(Screen::Gameplay)),
         )
         .add_systems(
             FixedUpdate,
@@ -343,5 +343,22 @@ fn update_ball(mut commands: Commands, mut query: Query<(Entity, &mut Transform)
         if tf.translation.y < -216.0 {
             commands.entity(entity).try_despawn();
         }
+    }
+}
+
+fn on_fish_spawn(
+    mut fish: Query<&mut Sprite, Added<FishState>>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    if fish.is_empty() {
+        return;
+    }
+    let layout = TextureAtlasLayout::from_grid(UVec2::new(48, 16), 3, 3, None, None);
+    let texture_atlas_layout = texture_atlas_layouts.add(layout);
+    for mut sprite in &mut fish {
+        sprite.texture_atlas = Some(TextureAtlas {
+            layout: texture_atlas_layout.clone(),
+            index: 0,
+        });
     }
 }
