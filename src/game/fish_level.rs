@@ -99,9 +99,9 @@ enum FishState {
 }
 
 #[derive(Component)]
-struct EatingTimer(Timer);
+struct FishTimer(Timer);
 
-impl Default for EatingTimer {
+impl Default for FishTimer {
     fn default() -> Self {
         Self(Timer::from_seconds(5.0, TimerMode::Once))
     }
@@ -114,7 +114,7 @@ pub struct FishGrey {
     name: Name,
     despawn: DespawnOnExit<Screen>,
     fish: FishState,
-    timer: EatingTimer,
+    timer: FishTimer,
 }
 
 impl Default for FishGrey {
@@ -124,7 +124,7 @@ impl Default for FishGrey {
             sprite: Sprite::default(),
             despawn: DespawnOnExit(Screen::Gameplay),
             fish: FishState::default(),
-            timer: EatingTimer::default(),
+            timer: FishTimer::default(),
         }
     }
 }
@@ -140,7 +140,7 @@ pub struct FishGold {
     despawn: DespawnOnExit<Screen>,
     fish: FishState,
     gold_marker: GoldMarker,
-    timer: EatingTimer,
+    timer: FishTimer,
 }
 
 impl Default for FishGold {
@@ -151,7 +151,7 @@ impl Default for FishGold {
             despawn: DespawnOnExit(Screen::Gameplay),
             fish: FishState::default(),
             gold_marker: GoldMarker,
-            timer: EatingTimer::default(),
+            timer: FishTimer::default(),
         }
     }
 }
@@ -161,8 +161,9 @@ fn update_fish(
         (
             &mut FishState,
             &mut Transform,
-            &mut EatingTimer,
+            &mut FishTimer,
             &GlobalTransform,
+            &mut Sprite,
         ),
         Without<Ball>,
     >,
@@ -171,7 +172,7 @@ fn update_fish(
     time: Res<Time>,
     sounds: If<Res<InteractionAssets>>,
 ) {
-    for (mut state, mut tf, mut timer, gtf) in &mut query {
+    for (mut state, mut tf, mut timer, gtf, mut sprite) in &mut query {
         // Update eating timer
         timer.0.tick(time.delta());
 
@@ -206,11 +207,12 @@ fn update_fish(
                 FishState::EatingLeft => FishState::EatingLeft,
                 FishState::EatingRight => FishState::EatingRight,
             };
-            timer.0.reset();
+            timer.0 = Timer::from_seconds(5.0, TimerMode::Once);
             commands.spawn(sound_effect(sounds.click.clone()));
         } else {
             // Check if eating timer has finished
             if is_eating && timer.0.remaining().as_secs() == 0 {
+                timer.0 = Timer::from_seconds(0.5, TimerMode::Once);
                 *state = if *state == FishState::EatingLeft {
                     FishState::SlowLeft
                 } else {
@@ -219,8 +221,22 @@ fn update_fish(
             }
 
             *state = match *state {
-                FishState::Idle => FishState::SlowLeft,
+                FishState::Idle => {
+                    timer.0 = Timer::from_seconds(0.5, TimerMode::Once);
+                    FishState::SlowLeft
+                }
                 FishState::SlowLeft => {
+                    if timer.0.remaining().as_millis() == 0 {
+                        timer.0 = Timer::from_seconds(0.5, TimerMode::Once);
+                        sprite.texture_atlas.as_mut().and_then(|t| {
+                            t.index += 3;
+                            if t.index >= 9 {
+                                t.index = 0;
+                            }
+                            Some(())
+                        });
+                        sprite.flip_x = false;
+                    }
                     tf.translation.x -= 1.0;
                     if tf.translation.x < 0.0 {
                         FishState::SlowRight
@@ -233,6 +249,17 @@ fn update_fish(
                     }
                 }
                 FishState::FastLeft => {
+                    if timer.0.remaining().as_millis() == 0 {
+                        timer.0 = Timer::from_seconds(0.1, TimerMode::Once);
+                        sprite.texture_atlas.as_mut().and_then(|t| {
+                            t.index += 3;
+                            if t.index >= 9 {
+                                t.index = 0;
+                            }
+                            Some(())
+                        });
+                        sprite.flip_x = false;
+                    }
                     tf.translation.x -= 3.0;
                     if tf.translation.x < 0.0 {
                         FishState::SlowRight
@@ -245,6 +272,17 @@ fn update_fish(
                     }
                 }
                 FishState::SlowRight => {
+                    if timer.0.remaining().as_millis() == 0 {
+                        timer.0 = Timer::from_seconds(0.5, TimerMode::Once);
+                        sprite.texture_atlas.as_mut().and_then(|t| {
+                            t.index += 3;
+                            if t.index >= 9 {
+                                t.index = 0;
+                            }
+                            Some(())
+                        });
+                        sprite.flip_x = true
+                    }
                     tf.translation.x += 1.0;
                     if tf.translation.x > 384.0 {
                         FishState::SlowLeft
@@ -257,6 +295,17 @@ fn update_fish(
                     }
                 }
                 FishState::FastRight => {
+                    if timer.0.remaining().as_millis() == 0 {
+                        timer.0 = Timer::from_seconds(0.1, TimerMode::Once);
+                        sprite.texture_atlas.as_mut().and_then(|t| {
+                            t.index += 3;
+                            if t.index >= 9 {
+                                t.index = 0;
+                            }
+                            Some(())
+                        });
+                        sprite.flip_x = true
+                    }
                     tf.translation.x += 3.0;
                     if tf.translation.x > 384.0 {
                         FishState::SlowLeft
