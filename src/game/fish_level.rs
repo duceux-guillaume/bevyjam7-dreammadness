@@ -10,7 +10,9 @@ pub(super) fn plugin(app: &mut App) {
         .register_ldtk_entity::<FishGold>("Fish_golden")
         .register_ldtk_entity::<LdtkEntityBundle>("Alga_1x1")
         .register_ldtk_entity::<LdtkEntityBundle>("Alga_1x2")
+        .register_ldtk_entity::<Player>("Player")
         .add_systems(OnEnter(Screen::Gameplay), setup)
+        .add_systems(Update, on_player_spawn.run_if(in_state(Screen::Gameplay)))
         .add_systems(FixedUpdate, update_fish.run_if(in_state(Screen::Gameplay)));
 }
 
@@ -94,14 +96,42 @@ fn update_fish(mut query: Query<(&mut FishState, &mut Transform)>) {
         *state = match *state {
             FishState::Idle => FishState::SlowLeft,
             FishState::SlowLeft => {
-                tf.translation.x -= 10.0;
-                FishState::FastLeft
+                tf.translation.x -= 1.0;
+                if tf.translation.x < 0.0 {
+                    FishState::SlowRight
+                } else {
+                    FishState::SlowLeft
+                }
             }
             FishState::FastLeft => FishState::SlowRight,
-            FishState::SlowRight => FishState::FastRight,
+            FishState::SlowRight => {
+                tf.translation.x += 1.0;
+                if tf.translation.x > 384.0 {
+                    FishState::SlowLeft
+                } else {
+                    FishState::SlowRight
+                }
+            }
             FishState::FastRight => FishState::EatingRight,
             FishState::EatingRight => FishState::EatingLeft,
             FishState::EatingLeft => FishState::Idle,
         };
     }
+}
+
+#[derive(Default, Component)]
+struct PlayerMarker;
+
+#[derive(Bundle, LdtkEntity, Default)]
+pub struct Player {
+    #[sprite]
+    sprite: Sprite,
+    name: Name,
+    despawn: DespawnOnExit<Screen>,
+    marker: PlayerMarker,
+}
+
+fn on_player_spawn(mut sprite: Single<&mut Sprite, Added<PlayerMarker>>, server: Res<AssetServer>) {
+    sprite.image = server.load("images/player.png");
+    sprite.custom_size = Some(Vec2::splat(32.));
 }
