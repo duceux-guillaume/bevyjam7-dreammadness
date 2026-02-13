@@ -231,6 +231,15 @@ fn update_fish(
 #[derive(Default, Component)]
 struct PlayerMarker;
 
+#[derive(Component)]
+struct BallSpawnTimer(Timer);
+
+impl Default for BallSpawnTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(1.0, TimerMode::Once))
+    }
+}
+
 #[derive(Bundle, LdtkEntity, Default)]
 pub struct Player {
     #[sprite]
@@ -238,6 +247,7 @@ pub struct Player {
     name: Name,
     despawn: DespawnOnExit<Screen>,
     marker: PlayerMarker,
+    spawn_timer: BallSpawnTimer,
 }
 
 fn on_player_spawn(
@@ -272,15 +282,25 @@ fn player_control(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
-    mut player_tf: Single<(&mut Transform, &mut GlobalTransform), With<PlayerMarker>>,
+    player_query: Single<
+        (&mut Transform, &GlobalTransform, &mut BallSpawnTimer),
+        With<PlayerMarker>,
+    >,
     mut mouse_button_input_reader: MessageReader<MouseButtonInput>,
     mut cursor_moved_reader: MessageReader<CursorMoved>,
+    time: Res<Time>,
 ) {
+    let (mut player_tf, player_global_tf, mut spawn_timer) = player_query.into_inner();
+
+    // Update spawn timer
+    spawn_timer.0.tick(time.delta());
+
     for mouse_button_input in mouse_button_input_reader.read() {
-        if mouse_button_input.state.is_pressed() {
-            let mut tf = Transform::from_translation(player_tf.1.translation());
+        if mouse_button_input.state.is_pressed() && spawn_timer.0.remaining_secs() == 0.0 {
+            let mut tf = Transform::from_translation(player_global_tf.translation());
             tf.translation.z = 10.0;
             commands.spawn(ball(meshes, materials, tf));
+            spawn_timer.0.reset();
             break;
         }
     }
@@ -296,7 +316,7 @@ fn player_control(
         if cursor.unwrap().x < -192.0 || cursor.unwrap().x > 192.0 {
             continue;
         }
-        player_tf.0.translation.x = cursor.unwrap().x + 192.;
+        player_tf.translation.x = cursor.unwrap().x + 192.;
     }
 }
 
