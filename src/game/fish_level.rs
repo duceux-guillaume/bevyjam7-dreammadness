@@ -1,4 +1,7 @@
-use crate::screens::Screen;
+use crate::{
+    audio::sound_effect, menus::credits::CreditsAssets, screens::Screen,
+    theme::interaction::InteractionAssets,
+};
 use bevy::{input::mouse::MouseButtonInput, prelude::*};
 use bevy_ecs_ldtk::prelude::*;
 use bevy_pancam::PanCam;
@@ -22,7 +25,12 @@ pub(super) fn plugin(app: &mut App) {
         );
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut cam: Single<&mut PanCam>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut cam: Single<&mut PanCam>,
+    music: Res<CreditsAssets>,
+) {
     commands.spawn((
         LdtkWorldBundle {
             ldtk_handle: asset_server.load("levels/level_1.ldtk").into(),
@@ -33,6 +41,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, mut cam: Single
         DespawnOnExit(Screen::Gameplay),
     ));
     cam.enabled = true;
+    commands.spawn((
+        Name::new("Fish Level Music"),
+        DespawnOnExit(Screen::Gameplay),
+        crate::audio::music(music.music.clone()),
+    ));
 }
 
 #[derive(Default, Bundle, LdtkEntity)]
@@ -124,6 +137,7 @@ fn update_fish(
     ball_query: Query<(Entity, &GlobalTransform), With<Ball>>,
     mut commands: Commands,
     time: Res<Time>,
+    sounds: If<Res<InteractionAssets>>,
 ) {
     for (mut state, mut tf, mut timer, gtf) in &mut query {
         // Update eating timer
@@ -161,6 +175,7 @@ fn update_fish(
                 FishState::EatingRight => FishState::EatingRight,
             };
             timer.0.reset();
+            commands.spawn(sound_effect(sounds.click.clone()));
         } else {
             // Check if eating timer has finished
             if is_eating && timer.0.remaining().as_secs() == 0 {
@@ -289,6 +304,7 @@ fn player_control(
     mut mouse_button_input_reader: MessageReader<MouseButtonInput>,
     mut cursor_moved_reader: MessageReader<CursorMoved>,
     time: Res<Time>,
+    sounds: If<Res<InteractionAssets>>,
 ) {
     let (mut player_tf, player_global_tf, mut spawn_timer) = player_query.into_inner();
 
@@ -300,6 +316,7 @@ fn player_control(
             let mut tf = Transform::from_translation(player_global_tf.translation());
             tf.translation.z = 10.0;
             commands.spawn(ball(meshes, materials, tf));
+            commands.spawn(sound_effect(sounds.hover.clone()));
             spawn_timer.0.reset();
             break;
         }

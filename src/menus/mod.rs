@@ -1,6 +1,6 @@
 //! The game's menus and transitions between them.
 
-mod credits;
+pub mod credits;
 mod main;
 mod pause;
 mod settings;
